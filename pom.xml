@@ -1,0 +1,76 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>v-quiz</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <name>Quiz</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <failOnMissingWebXml>false</failOnMissingWebXml>
+        
+        <infinispan.version>6.0.2.Final</infinispan.version>
+    </properties>
+    
+    <parent>
+        <!-- Basic dependencies for Vaadin Java EE apps -->
+        <groupId>org.vaadin</groupId>
+        <artifactId>vaadin-java-ee-essentials</artifactId>
+        <version>1.2</version>
+    </parent>
+    
+    <repositories>
+        <!-- Repository for experimental vaadin-java-ee-essentials -->
+        <repository>
+            <id>v4.tahvonen.fi</id>
+            <url>http://v4.tahvonen.fi/maven2</url>
+        </repository>
+    </repositories>
+   
+    <dependencies>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-push</artifactId>
+            <version>${vaadin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-core</artifactId>
+            <version>${infinispan.version}</version>
+            <!-- Provided as we use the Infinispan provided by Wildfly -->
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.vaadin</groupId>
+            <artifactId>jms-message-helper</artifactId>
+            <version>1.0</version>
+            <type>jar</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Dependencies>org.infinispan export</Dependencies>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>1.0.2.Final</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
