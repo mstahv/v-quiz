@@ -12,8 +12,8 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <failOnMissingWebXml>false</failOnMissingWebXml>
-        
         <infinispan.version>6.0.2.Final</infinispan.version>
+        <gatling.version>2.0.0-RC2</gatling.version>
     </properties>
     
     <parent>
@@ -24,7 +24,9 @@
     </parent>
     
     <repositories>
-        <!-- Repository for experimental vaadin-java-ee-essentials -->
+        <!-- Repository for experimental vaadin-java-ee-essentials:
+            a dependency collection to simplify vaadin java ee apps
+        -->
         <repository>
             <id>v4.tahvonen.fi</id>
             <url>http://v4.tahvonen.fi/maven2</url>
@@ -50,10 +52,21 @@
             <version>1.0</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling.version}</version>
+            </plugin>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
                 <version>2.4</version>

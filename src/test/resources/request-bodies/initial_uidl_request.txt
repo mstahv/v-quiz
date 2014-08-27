@@ -1,0 +1,1 @@
+v-browserDetails=1&theme=valo&v-appId=vquiz-112457675&v-sh=900&v-sw=1440&v-cw=845&v-ch=779&v-curdate=1408798653303&v-tzo=-180&v-dstd=60&v-rtzo=-120&v-dston=true&v-vw=845&v-vh=0&v-loc=http%3A%2F%2Fmatti.app.fi%3A8081%2Fv-quiz%2F&v-wn=vquiz-112457675-0.32907793461345136
