@@ -17,6 +17,8 @@ public class UserForm extends AbstractForm<User> {
 
     @Override
     protected Component createContent() {
+    	username.setId("username-field");
+    	getSaveButton().setId("userform-save-button");
         return new MVerticalLayout(
                 new FormLayout(
                         username
@@ -32,6 +34,7 @@ public class UserForm extends AbstractForm<User> {
     public void showModal(ContenderUI ui) {
         setEntity(ui.getUser());
         Window window = new Window("Your details:");
+        window.setId("login-window");
         window.setWidth("60%");
         window.setClosable(false);
         window.setModal(true);

@@ -14,5 +14,5 @@ import javax.servlet.annotation.WebServlet;
         initParams = {
             @WebInitParam(name = "uiprovider", value = "com.vaadin.cdi.CDIUIProvider")})
 @JMSDestinationDefinition(name = Resources.TOPIC_NAME, interfaceName = "javax.jms.Topic", destinationName = "myTopic")
-public class Servlet extends VaadinServlet {
+public class Servlet extends JMeterServlet {
 }

@@ -33,7 +33,7 @@ import org.vquiz.domain.User;
 public class ContenderUI extends AbstractQuizUI {
 
     private static final int PENALTY_SECONDS = 10;
-
+    
     @Resource
     private ManagedExecutorService managedExecutorService;
 
@@ -69,6 +69,10 @@ public class ContenderUI extends AbstractQuizUI {
     @Override
     protected void init(VaadinRequest request) {
 
+    	Logger.getLogger(ContenderUI.class.getName()).info("init");
+    	
+    	setComponentIds();
+    	
         loginForm.showModal(this);
 
         answerLabel.setVisible(false);
@@ -100,10 +104,20 @@ public class ContenderUI extends AbstractQuizUI {
 
     }
 
-    public void onSuggestClick(Button.ClickEvent event) {
+    private void setComponentIds() {
+    	questionLabel.setId("question-label");
+    	answerLabel.setId("answer-label");
+    	answerField.setId("answer-field");
+    	suggest.setId("suggest-field");
+    	loginForm.setId("login-form");
+	}
+
+	public void onSuggestClick(Button.ClickEvent event) {
         final String answer = answerField.getValue();
+        Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - answer "+answer);
         postAnswer(answer);
         if (!question.getAnswer().toLowerCase().equals(answer.toLowerCase())) {
+        	Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - wrong answer");
             Notification.show("Thats wrong! ",
                     PENALTY_SECONDS + "s penalty started...",
                     Notification.Type.HUMANIZED_MESSAGE);
@@ -126,10 +140,12 @@ public class ContenderUI extends AbstractQuizUI {
 
     public void login() throws Exception {
         if (repo.isReserved(user.getUsername())) {
+        	Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - Username taken");
             throw new Exception("Username taken");
         } else {
             repo.save(user);
             postMessage(user.getUsername() + " joined");
+            Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - joined");
         }
     }
 
@@ -147,6 +163,7 @@ public class ContenderUI extends AbstractQuizUI {
 
     @Override
     public void questionChanged(Question question) {
+    	Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - questionChanged: "+question.getQuestion());
         this.question = question;
         if (question.isSolved()) {
             questionLabel.setText(question.getQuestion());
@@ -158,6 +175,7 @@ public class ContenderUI extends AbstractQuizUI {
             suggest.setEnabled(false);
 
             if (question.getWinner().equals(user.getUsername())) {
+            	Logger.getLogger(ContenderUI.class.getName()).info("user "+user.getUsername()+" - WON!");
                 Notification.show("Congrats!", "You won!",
                         Notification.Type.WARNING_MESSAGE);
             } else {
