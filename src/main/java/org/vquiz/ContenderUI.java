@@ -7,13 +7,11 @@ import com.vaadin.server.VaadinRequest;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.TextField;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.inject.Inject;
-import javax.jms.JMSContext;
-import javax.jms.Topic;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.label.Header;
 import org.vaadin.maddon.label.RichText;
@@ -34,14 +32,9 @@ public class ContenderUI extends AbstractQuizUI {
 
     private static final int PENALTY_SECONDS = 10;
 
-    @Resource
-    private ManagedExecutorService managedExecutorService;
-
-    @Inject
-    private JMSContext jmsContext;
-
-    @Resource(name = Resources.TOPIC_NAME)
-    private Topic topic;
+    
+    // Managed executor service has too strict restrictions, does not allow enough tasks
+    private static ExecutorService executorServices = Executors.newFixedThreadPool(10);
 
     @Inject
     Repository repo;
@@ -65,6 +58,7 @@ public class ContenderUI extends AbstractQuizUI {
 
     @Inject
     UserForm loginForm;
+    private MessageListener jmsMessager;
 
     @Override
     protected void init(VaadinRequest request) {
@@ -74,7 +68,13 @@ public class ContenderUI extends AbstractQuizUI {
         answerLabel.setVisible(false);
         suggest.setEnabled(false);
 
-        new MessageListener(this).startListening();
+        addDetachListener(e -> {
+            repo.removeUser(user);
+            postMessage(user.getUsername() + " left");
+        });
+
+        jmsMessager = new MessageListener(this);
+        jmsMessager.startListening();
 
         setContent(
                 new MVerticalLayout(
@@ -93,11 +93,6 @@ public class ContenderUI extends AbstractQuizUI {
 
         joinExistingQuiz();
 
-        addDetachListener(e -> {
-            postMessage(user.getUsername() + " left");
-            repo.removeUser(user);
-        });
-
     }
 
     public void onSuggestClick(Button.ClickEvent event) {
@@ -108,7 +103,7 @@ public class ContenderUI extends AbstractQuizUI {
                     PENALTY_SECONDS + "s penalty started...",
                     Notification.Type.HUMANIZED_MESSAGE);
             suggest.setEnabled(false);
-            managedExecutorService.submit(() -> {
+            executorServices.submit(() -> {
                 try {
                     Thread.sleep(PENALTY_SECONDS * 1000);
                 } catch (InterruptedException ex) {
@@ -129,7 +124,10 @@ public class ContenderUI extends AbstractQuizUI {
             throw new Exception("Username taken");
         } else {
             repo.save(user);
-            postMessage(user.getUsername() + " joined");
+            // Disabled as crafting load test becomes tricky with non-deterministic
+            // changes in UI
+            // postMessage(user.getUsername() + " joined");
+            Notification.show("Welcome " + user.getUsername() + "!");
         }
     }
 
@@ -176,17 +174,19 @@ public class ContenderUI extends AbstractQuizUI {
     }
 
     void postMessage(String message) {
-        jmsContext.createProducer().send(topic, message);
+        jmsMessager.sendText(message);
     }
 
     void postAnswer(String answer) {
-        jmsContext.createProducer().send(topic, new Answer(answer, user));
+        jmsMessager.sendObject(new Answer(answer, user));
     }
 
     @Override
     public void answerSuggested(Answer answer) {
-        messageList.addMessage(answer.getUser() + " suggested *" + answer.
-                getAnswer() + "*");
+        // Disabled as crafting load test becomes tricky with non-deterministic
+        // changes in UI
+//        messageList.addMessage(answer.getUser() + " suggested *" + answer.
+//                getAnswer() + "*");
     }
 
 }
