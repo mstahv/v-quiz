@@ -51,13 +51,11 @@ class WebSocketVaadinSimulation extends Simulation {
     """Host""" -> "matti.app.fi:8081"
   )
 
-
   val uri1 = baseurl
-  
-  
+
   val chooseRandomUserAndSuggesstion = exec((session) => {
-      val username: String = Random.alphanumeric.take(4).mkString
-      val answer: String = Random.alphanumeric.take(8).mkString
+      val username: String = Random.alphanumeric.take(6).mkString
+      val answer: String = Random.alphanumeric.take(7).mkString
       session.setAll(
         """answer""" -> answer,
         """username""" -> username
@@ -86,43 +84,38 @@ class WebSocketVaadinSimulation extends Simulation {
     .exec(
       ws("PUSH CHANNEL").open("/PUSH/?v-uiId=0&v-csrfToken=${seckey}&X-Atmosphere-tracking-id=0&X-Atmosphere-Framework=2.1.5.vaadin4-jquery&X-Atmosphere-Transport=websocket&X-Atmosphere-TrackMessageSize=true&X-Cache-Date=0&Content-Type=application/json;%20charset=UTF-8&X-atmo-protocol=true")
       .headers(headers_4)
+      .check(wsAwait.within(30).until(1).regex("50\\|([^\\|]+).*").saveAs("atmokey"))
     )
-    .exec(ws("READ ATMOKEY").check(wsAwait.within(5).until(1).regex("50\\|([^\\|]+).*").saveAs("atmokey")))
-    .pause(1 seconds)
+    .pause((20 + Random.nextInt(5)) seconds)
     .exec(
       ws("LOGIN 1")
-      .sendText("""332|{"csrfToken":"${seckey}", "rpc":[["1","v","v",["positionx",["i","169"]]],["1","v","v",["positiony",["i","254"]]],["0","com.vaadin.shared.ui.ui.UIServerRpc","resize",["779","845","845","779"]],["16","v","v",["c",["i","0"]]],["4","v","v",["c",["i","4"]]],["4","v","v",["curText",["s","${username}"]]]], "syncId":1}""")
+      .sendText("""331|{"csrfToken":"${seckey}", "rpc":[["1","v","v",["positionx",["i","169"]]],["1","v","v",["positiony",["i","254"]]],["0","com.vaadin.shared.ui.ui.UIServerRpc","resize",["779","845","845","779"]],["16","v","v",["c",["i","0"]]],["5","v","v",["text",["s","${username}"]]],["5","v","v",["c",["i","5"]]]], "syncId":1}""")
     )
     .pause(1 seconds)
     .exec(
       ws("LOGIN 2")
-      .sendText("""109|{"csrfToken":"${seckey}", "rpc":[["4","v","v",["text",["s","${username}"]]]], "syncId":2}""")
-    )
-    .pause(1 seconds)
-    .exec(
-      ws("LOGIN 3")
-      .sendText("""303|{"csrfToken":"${seckey}", "rpc":[["6","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"button":"LEFT", "clientY":"476", "clientX":"256", "altKey":false, "ctrlKey":false, "type":"1", "shiftKey":false, "metaKey":false, "relativeY":"26", "relativeX":"50"}]]], "syncId":3}""")
+      .sendText("""303|{"csrfToken":"${seckey}", "rpc":[["7","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"52", "relativeY":"14", "type":"1", "altKey":false, "button":"LEFT", "clientX":"258", "clientY":"464"}]]], "syncId":2}""")
       .check(wsAwait.within(5).until(1).regex("Welcome ${username}"))
     )
-    .pause(5 seconds)
+    .pause((20 + Random.nextInt(5)) seconds)
     .exec(
       ws("Suggest answer 1")
-      .sendText("""376|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","8"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"button":"LEFT", "clientY":"346", "clientX":"308", "altKey":false, "ctrlKey":false, "type":"1", "shiftKey":false, "metaKey":false, "relativeY":"27", "relativeX":"74"}]]], "syncId":5}""")
-      .check(wsAwait.within(5).until(1).regex("wrong"))
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":3}""")
+      .check(wsAwait.within(15).until(1).regex("wrong"))
     )
-    .pause(13 seconds)
+    .pause((20 + Random.nextInt(5)) seconds)
     .exec(chooseRandomUserAndSuggesstion)
-        .exec(
+    .exec(
       ws("Suggest answer 2")
-      .sendText("""376|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","8"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"button":"LEFT", "clientY":"346", "clientX":"308", "altKey":false, "ctrlKey":false, "type":"1", "shiftKey":false, "metaKey":false, "relativeY":"27", "relativeX":"74"}]]], "syncId":6}""")
-      .check(wsAwait.within(5).until(1).regex("wrong"))
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":4}""")
+      .check(wsAwait.within(15).until(1).regex("wrong"))
     )
-    .pause(13 seconds)
+    .pause((20 + Random.nextInt(5)) seconds)
     .exec(chooseRandomUserAndSuggesstion)
-        .exec(
+    .exec(
       ws("Suggest answer 3")
-      .sendText("""376|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","8"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"button":"LEFT", "clientY":"346", "clientX":"308", "altKey":false, "ctrlKey":false, "type":"1", "shiftKey":false, "metaKey":false, "relativeY":"27", "relativeX":"74"}]]], "syncId":7}""")
-      .check(wsAwait.within(5).until(1).regex("wrong"))
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":5}""")
+      .check(wsAwait.within(15).until(1).regex("wrong"))
     )
     .pause(3 seconds)
     .exec(ws("WS close").close)
@@ -142,6 +135,6 @@ class WebSocketVaadinSimulation extends Simulation {
   //setUp(scn.inject(atOnceUsers(1))).protocols(httpProtocol)
 
   // This uses more load, simulates 1000 users who arrive with-in 10 seconds
-  setUp(scn.inject(rampUsers(50) over (10 seconds))).protocols(httpProtocol)
+  setUp(scn.inject(rampUsers(1000) over (30 seconds))).protocols(httpProtocol)
   
 }

@@ -12,7 +12,10 @@ import javax.servlet.annotation.WebServlet;
  */
 @WebServlet(name = "QuizServlet", urlPatterns = {"/*"}, asyncSupported = true,
         initParams = {
-            @WebInitParam(name = "uiprovider", value = "com.vaadin.cdi.CDIUIProvider")})
-@JMSDestinationDefinition(name = Resources.TOPIC_NAME, interfaceName = "javax.jms.Topic", destinationName = "myTopic")
+            @WebInitParam(name = "uiprovider", value = "com.vaadin.cdi.CDIUIProvider")
+            ,@WebInitParam(name ="org.atmosphere.cpr.broadcaster.maxProcessingThreads", value = "10")
+            ,@WebInitParam(name ="org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads", value = "10")
+        })
+//@JMSDestinationDefinition(name = Resources.TOPIC_NAME, interfaceName = "javax.jms.Topic", destinationName = "myTopic")
 public class Servlet extends VaadinServlet {
 }

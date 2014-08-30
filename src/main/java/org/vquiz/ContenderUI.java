@@ -7,10 +7,10 @@ import com.vaadin.server.VaadinRequest;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.TextField;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import javax.ejb.EJB;
 import javax.inject.Inject;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.label.Header;
@@ -32,15 +32,21 @@ public class ContenderUI extends AbstractQuizUI {
 
     private static final int PENALTY_SECONDS = 10;
 
-    
     // Managed executor service has too strict restrictions, does not allow enough tasks
-    private static ExecutorService executorServices = Executors.newFixedThreadPool(10);
+    private static final ScheduledExecutorService executorService = Executors.
+            newScheduledThreadPool(10);
 
     @Inject
     Repository repo;
 
     @Inject
     MessageList messageList;
+
+    @Inject
+    ActiveUIs activeUIs;
+
+    @EJB
+    MessageBean messageBean;
 
     private Question question;
 
@@ -54,12 +60,11 @@ public class ContenderUI extends AbstractQuizUI {
             answerField,
             suggest).withMargin(false);
 
-    private User user = new User();
+    private final User user = new User();
 
     @Inject
     UserForm loginForm;
-    private MessageListener jmsMessager;
-
+    
     @Override
     protected void init(VaadinRequest request) {
 
@@ -70,11 +75,11 @@ public class ContenderUI extends AbstractQuizUI {
 
         addDetachListener(e -> {
             repo.removeUser(user);
-            postMessage(user.getUsername() + " left");
+            // removed to make test more stable, on multiple runs
+            // postMessage(user.getUsername() + " left");
         });
-
-        jmsMessager = new MessageListener(this);
-        jmsMessager.startListening();
+        
+        activeUIs.register(this);
 
         setContent(
                 new MVerticalLayout(
@@ -103,15 +108,9 @@ public class ContenderUI extends AbstractQuizUI {
                     PENALTY_SECONDS + "s penalty started...",
                     Notification.Type.HUMANIZED_MESSAGE);
             suggest.setEnabled(false);
-            executorServices.submit(() -> {
-                try {
-                    Thread.sleep(PENALTY_SECONDS * 1000);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(ContenderUI.class.getName()).
-                            log(Level.SEVERE, null, ex);
-                }
+            executorService.schedule(() -> {
                 access(() -> suggest.setEnabled(true));
-            });
+            }, PENALTY_SECONDS, TimeUnit.SECONDS);
         }
     }
 
@@ -174,11 +173,11 @@ public class ContenderUI extends AbstractQuizUI {
     }
 
     void postMessage(String message) {
-        jmsMessager.sendText(message);
+        messageBean.postMessage(message);
     }
 
     void postAnswer(String answer) {
-        jmsMessager.sendObject(new Answer(answer, user));
+        messageBean.postAnswer(new Answer(answer, user));
     }
 
     @Override

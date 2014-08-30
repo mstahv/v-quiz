@@ -11,6 +11,7 @@ import com.vaadin.ui.TextField;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Resource;
+import javax.ejb.EJB;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.jms.JMSContext;
@@ -25,10 +26,10 @@ import org.vquiz.domain.Answer;
 import org.vquiz.domain.Question;
 import org.vquiz.qualifiers.QuestionRaised;
 import org.vquiz.AbstractQuizUI;
+import org.vquiz.ActiveUIs;
+import org.vquiz.MessageBean;
 import org.vquiz.MessageList;
-import org.vquiz.MessageListener;
 import org.vquiz.Repository;
-import org.vquiz.Resources;
 
 /**
  *
@@ -44,7 +45,7 @@ public class AdminUI extends AbstractQuizUI {
     @Inject
     private JMSContext jmsContext;
 
-    @Resource(name = Resources.TOPIC_NAME)
+    @Resource(lookup = "jms/topic/mytopic")
     private Topic topic;
 
     @Inject
@@ -55,6 +56,12 @@ public class AdminUI extends AbstractQuizUI {
 
     @Inject
     QuestionForm form;
+    
+    @EJB
+    MessageBean mBean;
+    
+    @Inject
+    ActiveUIs activeUIs;
 
     private final Label currentQuestion = new Label(NO_ACTIVE_QUESTION);
     private TextField newHintOrMessage = new MTextField().withInputPrompt(
@@ -71,10 +78,13 @@ public class AdminUI extends AbstractQuizUI {
 
     @Override
     protected void init(VaadinRequest request) {
-        
-        PasswordField passwordField = new PasswordField("Password (admin by default)");
-        passwordField.addValueChangeListener(e->{
-            if(repo.adminPasswordMatches(passwordField.getValue())) {
+
+        activeUIs.register(this);
+
+        PasswordField passwordField = new PasswordField(
+                "Password (admin by default)");
+        passwordField.addValueChangeListener(e -> {
+            if (repo.adminPasswordMatches(passwordField.getValue())) {
                 initActualUi();
             } else {
                 Notification.show("Ooops!",
@@ -83,32 +93,29 @@ public class AdminUI extends AbstractQuizUI {
         });
         setContent(new MVerticalLayout(passwordField));
         passwordField.focus();
- 
+
     }
 
     protected void initActualUi() {
         // Start receiving JMS messages from the quiz topic
-        new MessageListener(this).startListening();
-
         form.setEntity(new Question());
-        
+
         PasswordField newPasswordField = new PasswordField("Set admin password");
-        newPasswordField.addValueChangeListener(e->{
+        newPasswordField.addValueChangeListener(e -> {
             repo.setAdminPassword(newPasswordField.getValue());
         });
-        
 
         setContent(new MVerticalLayout(
                 new Header("Quiz view"),
                 new MHorizontalLayout(
                         new MVerticalLayout(
                                 new MVerticalLayout(
-                                    currentQuestion,
-                                    new MHorizontalLayout(newHintOrMessage, send)
+                                        currentQuestion,
+                                        new MHorizontalLayout(newHintOrMessage,
+                                                send)
                                 ).withCaption("Current question"),
                                 form,
                                 newPasswordField
-                                
                         ).withMargin(false),
                         messageList
                 ).withFullWidth(),
@@ -117,7 +124,7 @@ public class AdminUI extends AbstractQuizUI {
     }
 
     private void postMessage(String msg) {
-        if(msg != null && !msg.isEmpty()) {
+        if (msg != null && !msg.isEmpty()) {
             msg = "**" + msg + "**"; // emphasis admin messages with markdown
             jmsContext.createProducer().send(topic, msg);
         }
@@ -143,7 +150,6 @@ public class AdminUI extends AbstractQuizUI {
     public void questionChanged(Question question) {
         currentQuestion.setValue(question.getQuestion() + " - " + question.
                 getAnswer());
-
         messageList.addMessage("New quiz started: " + question.getQuestion());
     }
 
@@ -151,14 +157,16 @@ public class AdminUI extends AbstractQuizUI {
     public void answerSuggested(Answer answer) {
         final String message = answer.getUser() + " suggested *" + answer.
                 getAnswer() + "*";
-        if (activeQuestion.getAnswer().toLowerCase().equals(answer.getAnswer().
-                toLowerCase())) {
+        if (activeQuestion != null && activeQuestion.getAnswer().toLowerCase().
+                equals(answer.getAnswer().
+                        toLowerCase())) {
             activeQuestion.setWinner(answer.getUser().getUsername());
             repo.save(activeQuestion);
-           jmsContext.createProducer().send(topic, activeQuestion);
-           postMessage(answer.getUser().getUsername() + " WON!");
+            jmsContext.createProducer().send(topic, activeQuestion);
+            postMessage(answer.getUser().getUsername() + " WON!");
             try {
-                recentQuestions.addBeans((Question) BeanUtils.cloneBean(activeQuestion));
+                recentQuestions.addBeans((Question) BeanUtils.cloneBean(
+                        activeQuestion));
             } catch (Exception ex) {
                 Logger.getLogger(AdminUI.class.getName()).
                         log(Level.SEVERE, null, ex);
