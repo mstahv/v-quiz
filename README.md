@@ -20,6 +20,9 @@ To use the replicated mode in a cluster following configuration works fine:
 <cache-container name="myCache" default-cache="cachedb">
     <transport lock-timeout="60000"/>
     <replicated-cache name="cachedb" batching="true" mode="SYNC"/>
+    <replicated-cache name="messages" batching="true" mode="SYNC" />
+    <replicated-cache name="answers"  batching="true" mode="SYNC" />
+    <replicated-cache name="users" batching="true" mode="SYNC" />
 </cache-container>
 ```
 

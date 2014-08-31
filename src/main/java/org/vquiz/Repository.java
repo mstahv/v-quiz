@@ -1,11 +1,20 @@
 package org.vquiz;
 
 import java.io.Serializable;
-import java.util.Map;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.ejb.Stateless;
+import javax.ejb.Singleton;
+import org.infinispan.Cache;
 import org.infinispan.manager.CacheContainer;
+import org.infinispan.notifications.Listener;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
+import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
+import org.vquiz.admin.AdminUI;
+import org.vquiz.domain.Answer;
+import org.vquiz.domain.Password;
 import org.vquiz.domain.Question;
 import org.vquiz.domain.User;
 
@@ -15,7 +24,8 @@ import org.vquiz.domain.User;
  *
  * @author Matti Tahvonen <matti@vaadin.com>
  */
-@Stateless
+@Singleton
+@Listener
 public class Repository {
 
     private static final String PASSWORD_KEY = "_password";
@@ -24,26 +34,40 @@ public class Repository {
     @Resource(lookup = "java:jboss/infinispan/container/myCache")
     CacheContainer cc;
 
-    Map<String, Serializable> cache;
+    Collection<AbstractQuizUI> uis = new HashSet<>();
+
+    Cache<String, Serializable> settings;
+    Cache<String, User> users;
+    Cache<Date, Answer> answers;
+    Cache<Date, String> messages;
 
     @PostConstruct
     void init() {
-        this.cache = cc.getCache();
-        if (!cache.containsKey(PASSWORD_KEY)) {
-            cache.put("_password", "admin");
+        System.err.println("Repository instantiated");
+        this.settings = cc.getCache();
+        if (!settings.containsKey(PASSWORD_KEY)) {
+            settings.put("_password", new Password("admin"));
         }
+        users = cc.getCache("users");
+        answers = cc.getCache("answers");
+        messages = cc.getCache("hints");
+
+        settings.addListener(this);
+        users.addListener(this);
+        answers.addListener(this);
+        messages.addListener(this);
     }
 
     public Question getCurrent() {
-        return (Question) cache.get(CURRENT_QUESTION_KEY);
+        return (Question) settings.get(CURRENT_QUESTION_KEY);
     }
 
     public void save(Question data) {
-        cache.put(CURRENT_QUESTION_KEY, data);
+        settings.put(CURRENT_QUESTION_KEY, data);
     }
 
     public Serializable findByName(String key) {
-        return cache.get(key);
+        return settings.get(key);
     }
 
     public boolean isReserved(String username) {
@@ -51,23 +75,69 @@ public class Repository {
     }
 
     public void save(User user) {
-        cache.put(user.getUsername(), user);
+        users.put(user.getUsername(), user);
     }
 
     public void removeUser(User user) {
-        cache.remove(user.getUsername());
+        users.remove(user.getUsername());
     }
 
     public boolean adminPasswordMatches(String value) {
-        Serializable pw = cache.get(PASSWORD_KEY);
+        Password pw = (Password) settings.get(PASSWORD_KEY);
         if (pw == null) {
-            pw = "admin";
+            pw = new Password(("admin"));
         }
-        return pw.equals(value);
+        return pw.getPw().equals(value);
+    }
+
+    public void save(Answer answer) {
+        answers.put(new Date(), answer);
+    }
+
+    public void save(String hint) {
+        messages.put(new Date(), hint);
     }
 
     public void setAdminPassword(String value) {
-        cache.put(PASSWORD_KEY, value);
+        settings.put(PASSWORD_KEY, value);
+    }
+
+    public Cache<String, Serializable> getCache() {
+        return settings;
+    }
+
+    public void addListener(AbstractQuizUI listener) {
+        uis.add(listener);
+        listener.addDetachListener(e -> {
+            uis.remove(listener);
+        });
+    }
+
+    @CacheEntryCreated
+    public void onNewData(CacheEntryCreatedEvent event) {
+        // Only react to post events
+        if (!event.isPre()) {
+            Object value = event.getValue();
+            for (AbstractQuizUI ui : uis) {
+                ui.access(() -> {
+                    if (value instanceof Question) {
+                        ui.questionChanged((Question) value);
+                    } else if (value instanceof String) {
+                        ui.showMessage(value.toString());
+                    }
+                    if (ui instanceof AdminUI) {
+                        if (value instanceof Answer) {
+                            ui.answerSuggested((Answer) value);
+                        } else if (value instanceof User) {
+                            User user = (User) value;
+                            ui.showMessage(
+                                    "User " + user.getUsername() + " joined");
+                        }
+                    }
+                });
+
+            }
+        }
     }
 
 }

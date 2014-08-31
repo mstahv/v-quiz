@@ -36,17 +36,11 @@ public class ContenderUI extends AbstractQuizUI {
     private static final ScheduledExecutorService executorService = Executors.
             newScheduledThreadPool(10);
 
-    @Inject
+    @EJB
     Repository repo;
 
     @Inject
     MessageList messageList;
-
-    @Inject
-    ActiveUIs activeUIs;
-
-    @EJB
-    MessageBean messageBean;
 
     private Question question;
 
@@ -64,7 +58,7 @@ public class ContenderUI extends AbstractQuizUI {
 
     @Inject
     UserForm loginForm;
-    
+
     @Override
     protected void init(VaadinRequest request) {
 
@@ -74,12 +68,12 @@ public class ContenderUI extends AbstractQuizUI {
         suggest.setEnabled(false);
 
         addDetachListener(e -> {
-            repo.removeUser(user);
+            if (user.getUsername() != null) {
+                repo.removeUser(user);
+            }
             // removed to make test more stable, on multiple runs
             // postMessage(user.getUsername() + " left");
         });
-        
-        activeUIs.register(this);
 
         setContent(
                 new MVerticalLayout(
@@ -97,7 +91,7 @@ public class ContenderUI extends AbstractQuizUI {
         );
 
         joinExistingQuiz();
-
+        repo.addListener(this);
     }
 
     public void onSuggestClick(Button.ClickEvent event) {
@@ -173,11 +167,11 @@ public class ContenderUI extends AbstractQuizUI {
     }
 
     void postMessage(String message) {
-        messageBean.postMessage(message);
+        repo.save(message);
     }
 
     void postAnswer(String answer) {
-        messageBean.postAnswer(new Answer(answer, user));
+        repo.save(new Answer(answer, user));
     }
 
     @Override

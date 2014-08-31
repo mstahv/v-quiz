@@ -10,12 +10,9 @@ import com.vaadin.ui.PasswordField;
 import com.vaadin.ui.TextField;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import javax.jms.JMSContext;
-import javax.jms.Topic;
 import org.apache.commons.beanutils.BeanUtils;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.fields.MTextField;
@@ -26,8 +23,6 @@ import org.vquiz.domain.Answer;
 import org.vquiz.domain.Question;
 import org.vquiz.qualifiers.QuestionRaised;
 import org.vquiz.AbstractQuizUI;
-import org.vquiz.ActiveUIs;
-import org.vquiz.MessageBean;
 import org.vquiz.MessageList;
 import org.vquiz.Repository;
 
@@ -42,13 +37,7 @@ public class AdminUI extends AbstractQuizUI {
 
     protected static final String NO_ACTIVE_QUESTION = "No active question";
 
-    @Inject
-    private JMSContext jmsContext;
-
-    @Resource(lookup = "jms/topic/mytopic")
-    private Topic topic;
-
-    @Inject
+    @EJB
     Repository repo;
 
     @Inject
@@ -56,12 +45,6 @@ public class AdminUI extends AbstractQuizUI {
 
     @Inject
     QuestionForm form;
-    
-    @EJB
-    MessageBean mBean;
-    
-    @Inject
-    ActiveUIs activeUIs;
 
     private final Label currentQuestion = new Label(NO_ACTIVE_QUESTION);
     private TextField newHintOrMessage = new MTextField().withInputPrompt(
@@ -78,8 +61,6 @@ public class AdminUI extends AbstractQuizUI {
 
     @Override
     protected void init(VaadinRequest request) {
-
-        activeUIs.register(this);
 
         PasswordField passwordField = new PasswordField(
                 "Password (admin by default)");
@@ -121,12 +102,14 @@ public class AdminUI extends AbstractQuizUI {
                 ).withFullWidth(),
                 recentQuestions
         ));
+
+        repo.addListener(this);
     }
 
     private void postMessage(String msg) {
         if (msg != null && !msg.isEmpty()) {
             msg = "**" + msg + "**"; // emphasis admin messages with markdown
-            jmsContext.createProducer().send(topic, msg);
+            repo.save(msg);
         }
     }
 
@@ -136,8 +119,6 @@ public class AdminUI extends AbstractQuizUI {
         // save the current question into shared memory for users who join 
         // during quiz
         repo.save(question);
-        // post it to active users via JMS
-        jmsContext.createProducer().send(topic, question);
         activeQuestion = question;
     }
 
@@ -162,7 +143,6 @@ public class AdminUI extends AbstractQuizUI {
                         toLowerCase())) {
             activeQuestion.setWinner(answer.getUser().getUsername());
             repo.save(activeQuestion);
-            jmsContext.createProducer().send(topic, activeQuestion);
             postMessage(answer.getUser().getUsername() + " WON!");
             try {
                 recentQuestions.addBeans((Question) BeanUtils.cloneBean(
