@@ -133,37 +133,43 @@ public class ContenderUI extends AbstractQuizUI {
 
     @Override
     public void showMessage(String text) {
-        messageList.addMessage(text);
+        access(() -> {
+            messageList.addMessage(text);
+        });
     }
 
     @Override
     public void questionChanged(Question question) {
-        this.question = question;
-        if (question.isSolved()) {
-            questionLabel.setText(question.getQuestion());
-            answerLabel.withMarkDown(
-                    "Quiz was solved by " + question.getWinner() + ": *" + question.
-                    getAnswer() + "*");
-            answerLabel.setVisible(true);
-            answeringControls.setVisible(false);
-            suggest.setEnabled(false);
+        access(() -> {
 
-            if (question.getWinner().equals(user.getUsername())) {
-                Notification.show("Congrats!", "You won!",
-                        Notification.Type.WARNING_MESSAGE);
+            this.question = question;
+            if (question.isSolved()) {
+                questionLabel.setText(question.getQuestion());
+                answerLabel.withMarkDown(
+                        "Quiz was solved by " + question.getWinner() + ": *" + question.
+                        getAnswer() + "*");
+                answerLabel.setVisible(true);
+                answeringControls.setVisible(false);
+                suggest.setEnabled(false);
+
+                if (question.getWinner().equals(user.getUsername())) {
+                    Notification.show("Congrats!", "You won!",
+                            Notification.Type.WARNING_MESSAGE);
+                } else {
+                    Notification.show("Dough!!",
+                            "Quiz was solved by " + question.
+                            getWinner() + ". Be sharper next time!",
+                            Notification.Type.WARNING_MESSAGE);
+                }
             } else {
-                Notification.show("Dough!!", "Quiz was solved by " + question.
-                        getWinner() + ". Be sharper next time!",
-                        Notification.Type.WARNING_MESSAGE);
+                questionLabel.setText(question.getQuestion());
+                answerLabel.setVisible(false);
+                Notification.show("New question: " + question.getQuestion());
+                answerField.focus();
+                suggest.setEnabled(true);
+                answeringControls.setVisible(true);
             }
-        } else {
-            questionLabel.setText(question.getQuestion());
-            answerLabel.setVisible(false);
-            Notification.show("New question: " + question.getQuestion());
-            answerField.focus();
-            suggest.setEnabled(true);
-            answeringControls.setVisible(true);
-        }
+        });
     }
 
     void postMessage(String message) {
@@ -180,6 +186,11 @@ public class ContenderUI extends AbstractQuizUI {
         // changes in UI
 //        messageList.addMessage(answer.getUser() + " suggested *" + answer.
 //                getAnswer() + "*");
+    }
+
+    @Override
+    public void userJoined(User user) {
+        
     }
 
 }

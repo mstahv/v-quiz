@@ -10,7 +10,7 @@ import org.vaadin.maddon.fields.MTextField;
 import org.vaadin.maddon.form.AbstractForm;
 import org.vaadin.maddon.layouts.MVerticalLayout;
 import org.vquiz.domain.Question;
-import org.vquiz.qualifiers.QuestionRaised;
+import org.vquiz.domain.QuestionRaised;
 
 public class QuestionForm extends AbstractForm<Question> {
 
@@ -25,11 +25,13 @@ public class QuestionForm extends AbstractForm<Question> {
     @Override
     protected Component createContent() {
         setCaption("Create new question");
+        final FormLayout formLayout = new FormLayout(
+                question,
+                answer
+        );
+        formLayout.setMargin(true);
         return new MVerticalLayout(
-                new FormLayout(
-                        question,
-                        answer
-                ),
+                formLayout,
                 getToolbar()
         ).withMargin(false);
     }

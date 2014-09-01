@@ -1,4 +1,4 @@
-package org.vquiz.qualifiers;
+package org.vquiz.domain;
 
 import static java.lang.annotation.ElementType.*;
 import java.lang.annotation.Retention;

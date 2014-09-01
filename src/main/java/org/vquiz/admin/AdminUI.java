@@ -2,6 +2,8 @@ package org.vquiz.admin;
 
 import com.vaadin.annotations.Push;
 import com.vaadin.annotations.Theme;
+import com.vaadin.annotations.Title;
+import com.vaadin.annotations.Widgetset;
 import com.vaadin.cdi.CDIUI;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.ui.Label;
@@ -16,15 +18,15 @@ import javax.inject.Inject;
 import org.apache.commons.beanutils.BeanUtils;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.fields.MTextField;
-import org.vaadin.maddon.label.Header;
 import org.vaadin.maddon.layouts.MHorizontalLayout;
 import org.vaadin.maddon.layouts.MVerticalLayout;
-import org.vquiz.domain.Answer;
-import org.vquiz.domain.Question;
-import org.vquiz.qualifiers.QuestionRaised;
 import org.vquiz.AbstractQuizUI;
 import org.vquiz.MessageList;
 import org.vquiz.Repository;
+import org.vquiz.domain.Answer;
+import org.vquiz.domain.Question;
+import org.vquiz.domain.User;
+import org.vquiz.domain.QuestionRaised;
 
 /**
  *
@@ -32,7 +34,9 @@ import org.vquiz.Repository;
  */
 @CDIUI
 @Theme("valo")
+@Widgetset("org.vquiz.admin.AdminWidgetSet")
 @Push
+@Title("Quiz admin panel")
 public class AdminUI extends AbstractQuizUI {
 
     protected static final String NO_ACTIVE_QUESTION = "No active question";
@@ -45,6 +49,9 @@ public class AdminUI extends AbstractQuizUI {
 
     @Inject
     QuestionForm form;
+
+    @Inject
+    private Statistics statistics;
 
     private final Label currentQuestion = new Label(NO_ACTIVE_QUESTION);
     private TextField newHintOrMessage = new MTextField().withInputPrompt(
@@ -59,8 +66,13 @@ public class AdminUI extends AbstractQuizUI {
     private final MessageList messageList = new MessageList();
     private Question activeQuestion;
 
+
     @Override
     protected void init(VaadinRequest request) {
+        setPollInterval(5000);
+        addPollListener(e -> {
+            updateStatistics();
+        });
 
         PasswordField passwordField = new PasswordField(
                 "Password (admin by default)");
@@ -87,7 +99,6 @@ public class AdminUI extends AbstractQuizUI {
         });
 
         setContent(new MVerticalLayout(
-                new Header("Quiz view"),
                 new MHorizontalLayout(
                         new MVerticalLayout(
                                 new MVerticalLayout(
@@ -98,7 +109,10 @@ public class AdminUI extends AbstractQuizUI {
                                 form,
                                 newPasswordField
                         ).withMargin(false),
-                        messageList
+                        new MVerticalLayout(
+                                statistics,
+                                messageList
+                        )
                 ).withFullWidth(),
                 recentQuestions
         ));
@@ -120,39 +134,57 @@ public class AdminUI extends AbstractQuizUI {
         // during quiz
         repo.save(question);
         activeQuestion = question;
+        recentQuestions.addBeans(question);
     }
 
     @Override
     public void showMessage(String text) {
-        messageList.addMessage(text);
+        access(() -> {
+            messageList.addMessage(text);
+        });
     }
 
     @Override
     public void questionChanged(Question question) {
-        currentQuestion.setValue(question.getQuestion() + " - " + question.
-                getAnswer());
-        messageList.addMessage("New quiz started: " + question.getQuestion());
+        access(() -> {
+            currentQuestion.setValue(question.getQuestion() + " - " + question.
+                    getAnswer());
+            messageList.
+                    addMessage("New quiz started: " + question.getQuestion());
+        });
     }
 
     @Override
     public void answerSuggested(Answer answer) {
-        final String message = answer.getUser() + " suggested *" + answer.
-                getAnswer() + "*";
-        if (activeQuestion != null && activeQuestion.getAnswer().toLowerCase().
-                equals(answer.getAnswer().
-                        toLowerCase())) {
-            activeQuestion.setWinner(answer.getUser().getUsername());
-            repo.save(activeQuestion);
-            postMessage(answer.getUser().getUsername() + " WON!");
-            try {
-                recentQuestions.addBeans((Question) BeanUtils.cloneBean(
-                        activeQuestion));
-            } catch (Exception ex) {
-                Logger.getLogger(AdminUI.class.getName()).
-                        log(Level.SEVERE, null, ex);
+        access(() -> {
+            statistics.reportAnswer();
+            if (activeQuestion != null && activeQuestion.getAnswer().
+                    toLowerCase().
+                    equals(answer.getAnswer().
+                            toLowerCase())) {
+                activeQuestion.setWinner(answer.getUser().getUsername());
+                repo.save(activeQuestion);
+                postMessage(answer.getUser().getUsername() + " WON!");
+                try {
+                    recentQuestions.addBeans((Question) BeanUtils.cloneBean(
+                            activeQuestion));
+
+                } catch (Exception ex) {
+                    Logger.getLogger(AdminUI.class
+                            .getName()).
+                            log(Level.SEVERE, null, ex);
+                }
             }
-        }
-        messageList.addMessage(message);
+        });
+    }
+
+    @Override
+    public void userJoined(User user) {
+
+    }
+
+    private void updateStatistics() {
+        statistics.report();
     }
 
 }

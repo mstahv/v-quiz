@@ -12,7 +12,6 @@ import org.infinispan.manager.CacheContainer;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
 import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
-import org.vquiz.admin.AdminUI;
 import org.vquiz.domain.Answer;
 import org.vquiz.domain.Password;
 import org.vquiz.domain.Question;
@@ -50,7 +49,7 @@ public class Repository {
         }
         users = cc.getCache("users");
         answers = cc.getCache("answers");
-        messages = cc.getCache("hints");
+        messages = cc.getCache("messages");
 
         settings.addListener(this);
         users.addListener(this);
@@ -115,29 +114,29 @@ public class Repository {
 
     @CacheEntryCreated
     public void onNewData(CacheEntryCreatedEvent event) {
-        // Only react to post events
+        // Don't react to pre events
         if (!event.isPre()) {
             Object value = event.getValue();
             for (AbstractQuizUI ui : uis) {
-                ui.access(() -> {
-                    if (value instanceof Question) {
-                        ui.questionChanged((Question) value);
-                    } else if (value instanceof String) {
-                        ui.showMessage(value.toString());
-                    }
-                    if (ui instanceof AdminUI) {
-                        if (value instanceof Answer) {
-                            ui.answerSuggested((Answer) value);
-                        } else if (value instanceof User) {
-                            User user = (User) value;
-                            ui.showMessage(
-                                    "User " + user.getUsername() + " joined");
-                        }
-                    }
-                });
-
+                if (value instanceof Question) {
+                    ui.questionChanged((Question) value);
+                } else if (value instanceof String) {
+                    ui.showMessage(value.toString());
+                } else if (value instanceof Answer) {
+                    ui.answerSuggested((Answer) value);
+                } else if (value instanceof User) {
+                    ui.userJoined((User) value);
+                }
             }
         }
     }
 
+    public int getUserCount() {
+        return users.size();
+    }
+
+    public int getSugestionCount() {
+        return answers.size();
+    }
+    
 }
