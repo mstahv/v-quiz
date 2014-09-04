@@ -12,8 +12,10 @@ import javax.servlet.annotation.WebServlet;
 @WebServlet(name = "QuizServlet", urlPatterns = {"/*"}, asyncSupported = true,
         initParams = {
             @WebInitParam(name = "uiprovider", value = "com.vaadin.cdi.CDIUIProvider"),
-            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxProcessingThreads", value = "10"),
-            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads", value = "10")
+            @WebInitParam(name = "heartbeatInterval", value = "180"),
+//            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxProcessingThreads", value = "10"),
+//            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads", value = "10")
+
         })
 public class Servlet extends VaadinServlet {
 }

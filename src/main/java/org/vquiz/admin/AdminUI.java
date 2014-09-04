@@ -66,7 +66,6 @@ public class AdminUI extends AbstractQuizUI {
     private final MessageList messageList = new MessageList();
     private Question activeQuestion;
 
-
     @Override
     protected void init(VaadinRequest request) {
         setPollInterval(5000);
@@ -156,26 +155,17 @@ public class AdminUI extends AbstractQuizUI {
 
     @Override
     public void answerSuggested(Answer answer) {
-        access(() -> {
-            statistics.reportAnswer();
-            if (activeQuestion != null && activeQuestion.getAnswer().
-                    toLowerCase().
-                    equals(answer.getAnswer().
-                            toLowerCase())) {
+        statistics.reportAnswer();
+        if (activeQuestion != null && activeQuestion.getAnswer().
+                toLowerCase().
+                equals(answer.getAnswer().
+                        toLowerCase())) {
+            access(() -> {
                 activeQuestion.setWinner(answer.getUser().getUsername());
                 repo.save(activeQuestion);
                 postMessage(answer.getUser().getUsername() + " WON!");
-                try {
-                    recentQuestions.addBeans((Question) BeanUtils.cloneBean(
-                            activeQuestion));
-
-                } catch (Exception ex) {
-                    Logger.getLogger(AdminUI.class
-                            .getName()).
-                            log(Level.SEVERE, null, ex);
-                }
-            }
-        });
+            });
+        }
     }
 
     @Override
