@@ -15,7 +15,9 @@ import org.vaadin.maddon.layouts.MVerticalLayout;
 import org.vquiz.Repository;
 
 /**
- *
+ * This component uses some charts to display some live data about the quiz game
+ * usage.
+ * 
  * @author Matti Tahvonen <matti@vaadin.com>
  */
 public class Statistics extends MVerticalLayout {
@@ -29,16 +31,19 @@ public class Statistics extends MVerticalLayout {
     private int answers = 0;
 
     private final Chart activeUsers = new Chart(ChartType.COLUMN);
-    private final DataSeries activeUsersDs = new DataSeries();
+    private final DataSeries activeUsersDs = new DataSeries("Total");
+    private final DataSeries localUsersDs = new DataSeries("This node");
     private final Chart answersPerSecond = new Chart(ChartType.LINE);
-    private final DataSeries answersPerSecondDs = new DataSeries();
+    private final DataSeries answersPerSecondDs = new DataSeries("Ansers/second");
     private final Chart totalSuggestion = new Chart(ChartType.AREA);
-    private final DataSeries totalSuggestionsDs = new DataSeries();
+    private final DataSeries totalSuggestionsDs = new DataSeries(
+            "Total suggestions");
     private final Chart memUsage = new Chart(ChartType.AREA);
-    private final DataSeries memUsageDs = new DataSeries();
+    private final DataSeries memUsageDs = new DataSeries("Heap size, MB");
 
     public Statistics() {
         activeUsers.getConfiguration().addSeries(activeUsersDs);
+        activeUsers.getConfiguration().addSeries(localUsersDs);
         configureChart(activeUsers, "Active users", false);
         answersPerSecond.getConfiguration().addSeries(answersPerSecondDs);
         configureChart(answersPerSecond, "Answers per second", false);
@@ -76,6 +81,9 @@ public class Statistics extends MVerticalLayout {
         activeUsersDs.
                 add(new DataSeriesItem(now, repo.getUserCount()), true,
                         shift);
+        localUsersDs.
+                add(new DataSeriesItem(now, repo.getLocalUserCount()), true,
+                        shift);
         answersPerSecondDs.add(new DataSeriesItem(now,
                 answersPerSecond()), true, shift);
 
@@ -97,7 +105,7 @@ public class Statistics extends MVerticalLayout {
     private void configureChart(Chart chart, String caption, boolean credits) {
         chart.setCaption(caption);
         chart.setSizeFull();
-        
+
         chart.getConfiguration().setCredits(new Credits(credits));
         chart.getConfiguration().getLegend().setEnabled(false);
         chart.getConfiguration().getxAxis().setType(AxisType.DATETIME);

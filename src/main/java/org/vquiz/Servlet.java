@@ -13,8 +13,6 @@ import javax.servlet.annotation.WebServlet;
         initParams = {
             @WebInitParam(name = "uiprovider", value = "com.vaadin.cdi.CDIUIProvider"),
             @WebInitParam(name = "heartbeatInterval", value = "180"),
-//            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxProcessingThreads", value = "10"),
-//            @WebInitParam(name = "org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads", value = "10")
 
         })
 public class Servlet extends VaadinServlet {

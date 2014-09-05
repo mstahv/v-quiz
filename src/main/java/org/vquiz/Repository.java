@@ -2,9 +2,7 @@ package org.vquiz;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -55,7 +53,6 @@ public class Repository {
         messages = cc.getCache("messages");
 
         settings.addListener(this);
-        users.addListener(this);
         answers.addListener(this);
         messages.addListener(this);
     }
@@ -112,7 +109,10 @@ public class Repository {
         uis.add(listener);
         listener.addDetachListener(e -> {
             uis.remove(listener);
-        });
+            if(listener.getUser().getUsername() != null) {
+                removeUser(listener.getUser());
+            }
+        }); 
     }
 
     public void addListener(AdminUI listener) {
@@ -128,31 +128,32 @@ public class Repository {
         if (!event.isPre()) {
             Object value = event.getValue();
             if (value instanceof Question) {
-                for (AbstractQuizUI ui : uis) {
+                for (ContenderUI ui : uis) {
                     ui.questionChanged((Question) value);
                 }
-                for (AbstractQuizUI ui : adminUis) {
+                for (AdminUI ui : adminUis) {
                     ui.questionChanged((Question) value);
                 }
             } else if (value instanceof String) {
-                for (AbstractQuizUI ui : uis) {
+                for (ContenderUI ui : uis) {
                     ui.showMessage(value.toString());
                 }
             } else {
-                for (AbstractQuizUI ui : adminUis) {
+                for (AdminUI ui : adminUis) {
                     if (value instanceof Answer) {
                         ui.answerSuggested((Answer) value);
-                    } else if (value instanceof User) {
-                        ui.userJoined((User) value);
                     }
                 }
             }
-
         }
     }
 
     public int getUserCount() {
         return users.size();
+    }
+    
+    public int getLocalUserCount() {
+        return uis.size();
     }
 
     public int getSugestionCount() {

@@ -69,4 +69,14 @@ public class Question implements Serializable {
         this.question = question;
     }
 
+    public boolean matches(Answer answer) {
+        if(winner != null) {
+            return false;
+        }
+        return getAnswer().
+                toLowerCase().
+                equals(answer.getAnswer().
+                        toLowerCase());
+    }
+
 }

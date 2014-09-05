@@ -10,17 +10,14 @@ import com.vaadin.ui.Label;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.PasswordField;
 import com.vaadin.ui.TextField;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.vaadin.ui.UI;
 import javax.ejb.EJB;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import org.apache.commons.beanutils.BeanUtils;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.fields.MTextField;
 import org.vaadin.maddon.layouts.MHorizontalLayout;
 import org.vaadin.maddon.layouts.MVerticalLayout;
-import org.vquiz.AbstractQuizUI;
 import org.vquiz.MessageList;
 import org.vquiz.Repository;
 import org.vquiz.domain.Answer;
@@ -37,7 +34,7 @@ import org.vquiz.domain.QuestionRaised;
 @Widgetset("org.vquiz.admin.AdminWidgetSet")
 @Push
 @Title("Quiz admin panel")
-public class AdminUI extends AbstractQuizUI {
+public class AdminUI extends UI {
 
     protected static final String NO_ACTIVE_QUESTION = "No active question";
 
@@ -68,11 +65,7 @@ public class AdminUI extends AbstractQuizUI {
 
     @Override
     protected void init(VaadinRequest request) {
-        setPollInterval(5000);
-        addPollListener(e -> {
-            updateStatistics();
-        });
-
+        // Show password promt by default
         PasswordField passwordField = new PasswordField(
                 "Password (admin by default)");
         passwordField.addValueChangeListener(e -> {
@@ -89,7 +82,6 @@ public class AdminUI extends AbstractQuizUI {
     }
 
     protected void initActualUi() {
-        // Start receiving JMS messages from the quiz topic
         form.setEntity(new Question());
 
         PasswordField newPasswordField = new PasswordField("Set admin password");
@@ -117,6 +109,12 @@ public class AdminUI extends AbstractQuizUI {
         ));
 
         repo.addListener(this);
+
+        setPollInterval(5000);
+        addPollListener(e -> {
+            updateStatistics();
+        });
+
     }
 
     private void postMessage(String msg) {
@@ -136,14 +134,12 @@ public class AdminUI extends AbstractQuizUI {
         recentQuestions.addBeans(question);
     }
 
-    @Override
     public void showMessage(String text) {
         access(() -> {
             messageList.addMessage(text);
         });
     }
 
-    @Override
     public void questionChanged(Question question) {
         access(() -> {
             currentQuestion.setValue(question.getQuestion() + " - " + question.
@@ -153,24 +149,15 @@ public class AdminUI extends AbstractQuizUI {
         });
     }
 
-    @Override
     public void answerSuggested(Answer answer) {
         statistics.reportAnswer();
-        if (activeQuestion != null && activeQuestion.getAnswer().
-                toLowerCase().
-                equals(answer.getAnswer().
-                        toLowerCase())) {
+        if (activeQuestion.matches(answer)) {
             access(() -> {
                 activeQuestion.setWinner(answer.getUser().getUsername());
                 repo.save(activeQuestion);
                 postMessage(answer.getUser().getUsername() + " WON!");
             });
         }
-    }
-
-    @Override
-    public void userJoined(User user) {
-
     }
 
     private void updateStatistics() {

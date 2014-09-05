@@ -2,16 +2,24 @@ package org.vquiz;
 
 import com.vaadin.annotations.Push;
 import com.vaadin.annotations.Theme;
+import com.vaadin.annotations.Title;
 import com.vaadin.cdi.CDIUI;
+import com.vaadin.server.FontAwesome;
 import com.vaadin.server.VaadinRequest;
+import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Notification;
+import com.vaadin.ui.Panel;
 import com.vaadin.ui.TextField;
+import com.vaadin.ui.UI;
+import com.vaadin.ui.Window;
+import com.vaadin.ui.themes.ValoTheme;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.ejb.EJB;
 import javax.inject.Inject;
+import org.vaadin.maddon.button.MButton;
 import org.vaadin.maddon.button.PrimaryButton;
 import org.vaadin.maddon.label.Header;
 import org.vaadin.maddon.label.RichText;
@@ -27,8 +35,9 @@ import org.vquiz.domain.User;
  */
 @CDIUI("")
 @Theme("valo")
+@Title("The Quiz")
 @Push
-public class ContenderUI extends AbstractQuizUI {
+public class ContenderUI extends UI {
 
     private static final int PENALTY_SECONDS = 10;
 
@@ -45,19 +54,32 @@ public class ContenderUI extends AbstractQuizUI {
     private Question question;
 
     Header questionLabel = new Header("Waiting for new quiz...").setHeaderLevel(
-            3);
+            2);
     RichText answerLabel = new RichText();
     TextField answerField = new TextField();
     Button suggest = new PrimaryButton("Suggest answer", this::onSuggestClick);
 
-    MHorizontalLayout answeringControls = new MHorizontalLayout(
-            answerField,
-            suggest).withMargin(false);
+    Button help = new MButton(FontAwesome.LIFE_RING).withStyleName("link").withListener(e -> {
+        Window window = new Window("What it this about?",
+                new MVerticalLayout(
+                        new RichText().withMarkDownResource("/intro.md")
+                )
+        );
+        window.setWidth("80%");
+        window.setHeight("50%");
+        window.setModal(true);
+        addWindow(window);
+    });
+
+    MHorizontalLayout answeringControls = new MHorizontalLayout()
+            .expand(answerField)
+            .with(suggest)
+            .withMargin(false).withFullWidth();
 
     private final User user = new User();
 
     @Inject
-    UserForm loginForm;
+    LoginWindow loginForm;
 
     @Override
     protected void init(VaadinRequest request) {
@@ -67,32 +89,32 @@ public class ContenderUI extends AbstractQuizUI {
         answerLabel.setVisible(false);
         suggest.setEnabled(false);
 
-        addDetachListener(e -> {
-            if (user.getUsername() != null) {
-                repo.removeUser(user);
-            }
-            // removed to make test more stable, on multiple runs
-            // postMessage(user.getUsername() + " left");
-        });
+        Panel currentPanel = new Panel("Current Question",
+                new MVerticalLayout(
+                        questionLabel,
+                        answerLabel,
+                        answeringControls
+                )
+        );
+        currentPanel.setWidth(LAYOUT_WIDTH);
+        currentPanel.setIcon(FontAwesome.GRADUATION_CAP);
+
+        Panel messages = new Panel("Hints and game flow", messageList);
+        messages.setIcon(FontAwesome.BELL);
+        messages.setStyleName(ValoTheme.PANEL_WELL);
+        messages.setWidth(LAYOUT_WIDTH);
+        messages.setHeight("300px");
 
         setContent(
                 new MVerticalLayout(
-                        new RichText().withMarkDownResource("/intro.md")
-                ).expand(
-                        new MHorizontalLayout(
-                                new MVerticalLayout(
-                                        questionLabel,
-                                        answerLabel,
-                                        answeringControls).withCaption(
-                                        "Current Quiz:").withMargin(false),
-                                messageList
-                        ).withFullWidth()
-                )
+                        currentPanel,
+                        messages,
+                        help
+                ).alignAll(Alignment.TOP_CENTER)
         );
 
-        joinExistingQuiz();
-        repo.addListener(this);
     }
+    protected static final String LAYOUT_WIDTH = "600px";
 
     public void onSuggestClick(Button.ClickEvent event) {
         final String answer = answerField.getValue();
@@ -114,13 +136,17 @@ public class ContenderUI extends AbstractQuizUI {
 
     public void login() throws Exception {
         if (repo.isReserved(user.getUsername())) {
-            throw new Exception("Username taken");
+            throw new Exception("That username taken, choose another");
         } else {
             repo.save(user);
+            repo.addListener(this);
             // Disabled as crafting load test becomes tricky with non-deterministic
             // changes in UI
             // postMessage(user.getUsername() + " joined");
-            Notification.show("Welcome " + user.getUsername() + "!");
+            Notification.show("Welcome " + user.getUsername() + "!",
+                    Notification.Type.TRAY_NOTIFICATION);
+            messageList.addMessage("You joined");
+            joinExistingQuiz();
         }
     }
 
@@ -131,14 +157,12 @@ public class ContenderUI extends AbstractQuizUI {
         }
     }
 
-    @Override
     public void showMessage(String text) {
         access(() -> {
             messageList.addMessage(text);
         });
     }
 
-    @Override
     public void questionChanged(Question question) {
         access(() -> {
 
@@ -156,7 +180,7 @@ public class ContenderUI extends AbstractQuizUI {
                     Notification.show("Congrats!", "You won!",
                             Notification.Type.WARNING_MESSAGE);
                 } else {
-                    Notification.show("Dough!!",
+                    Notification.show("Ooops!!",
                             "Quiz was solved by " + question.
                             getWinner() + ". Be sharper next time!",
                             Notification.Type.WARNING_MESSAGE);
@@ -165,6 +189,8 @@ public class ContenderUI extends AbstractQuizUI {
                 questionLabel.setText(question.getQuestion());
                 answerLabel.setVisible(false);
                 Notification.show("New question: " + question.getQuestion());
+                messageList.addMessage("New question raised: *" + question.
+                        getQuestion() + "*");
                 answerField.focus();
                 suggest.setEnabled(true);
                 answeringControls.setVisible(true);
@@ -178,19 +204,6 @@ public class ContenderUI extends AbstractQuizUI {
 
     void postAnswer(String answer) {
         repo.save(new Answer(answer, user));
-    }
-
-    @Override
-    public void answerSuggested(Answer answer) {
-        // Disabled as crafting load test becomes tricky with non-deterministic
-        // changes in UI
-//        messageList.addMessage(answer.getUser() + " suggested *" + answer.
-//                getAnswer() + "*");
-    }
-
-    @Override
-    public void userJoined(User user) {
-        
     }
 
 }

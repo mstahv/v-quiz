@@ -11,7 +11,7 @@ import org.vaadin.maddon.form.AbstractForm;
 import org.vaadin.maddon.layouts.MVerticalLayout;
 import org.vquiz.domain.User;
 
-public class UserForm extends AbstractForm<User> {
+public class LoginWindow extends AbstractForm<User> {
 
     TextField username = new MTextField("Username");
 
@@ -25,7 +25,7 @@ public class UserForm extends AbstractForm<User> {
         );
     }
 
-    public UserForm() {
+    public LoginWindow() {
         setEagarValidation(true);
     }
 

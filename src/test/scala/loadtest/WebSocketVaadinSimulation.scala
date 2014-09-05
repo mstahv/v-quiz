@@ -61,6 +61,9 @@ class WebSocketVaadinSimulation extends Simulation {
         """username""" -> username
       )
     })
+  
+  // TODO separate Vaadin and Atmsphere related xsrf key, syncId, atmokey, 
+  // and message lenght stuff to a helper liberary for easier test maintenance
 
   // static resoures not fetched, can/should be moved to CDN
   val scn = scenario("BasicVaadinHelloSimulation4")
@@ -100,21 +103,21 @@ class WebSocketVaadinSimulation extends Simulation {
     .pause((20 + Random.nextInt(5)) seconds)
     .exec(
       ws("Suggest answer 1")
-      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":3}""")
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["15","v","v",["text",["s","${answer}"]]],["15","v","v",["c",["i","7"]]],["16","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":3}""")
       .check(wsAwait.within(15).until(1).regex("wrong"))
     )
     .pause((20 + Random.nextInt(5)) seconds)
     .exec(chooseRandomUserAndSuggesstion)
     .exec(
       ws("Suggest answer 2")
-      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":4}""")
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["15","v","v",["text",["s","${answer}"]]],["15","v","v",["c",["i","7"]]],["16","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":4}""")
       .check(wsAwait.within(15).until(1).regex("wrong"))
     )
     .pause((20 + Random.nextInt(5)) seconds)
     .exec(chooseRandomUserAndSuggesstion)
     .exec(
       ws("Suggest answer 3")
-      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["16","v","v",["text",["s","${answer}"]]],["16","v","v",["c",["i","7"]]],["17","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":5}""")
+      .sendText("""374|{"csrfToken":"${seckey}", "rpc":[["15","v","v",["text",["s","${answer}"]]],["15","v","v",["c",["i","7"]]],["16","com.vaadin.shared.ui.button.ButtonServerRpc","click",[{"shiftKey":false, "metaKey":false, "ctrlKey":false, "relativeX":"82", "relativeY":"8", "type":"1", "altKey":false, "button":"LEFT", "clientX":"316", "clientY":"327"}]]], "syncId":5}""")
       .check(wsAwait.within(15).until(1).regex("wrong"))
     )
     .pause(3 seconds)
@@ -135,6 +138,6 @@ class WebSocketVaadinSimulation extends Simulation {
   //setUp(scn.inject(atOnceUsers(1))).protocols(httpProtocol)
 
   // This uses more load, simulates 1000 users who arrive with-in 10 seconds
-  setUp(scn.inject(rampUsers(1000) over (30 seconds))).protocols(httpProtocol)
+  setUp(scn.inject(rampUsers(1) over (30 seconds))).protocols(httpProtocol)
   
 }
